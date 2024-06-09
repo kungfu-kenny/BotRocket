@@ -1,0 +1,14 @@
+[
+    {
+        "id": "id of selected admin",
+        "name": "his name",
+        "surname": "his surname",
+        "username": "his username in telegram"
+    },
+    {
+        "id": "empty",
+        "name": "Олександр",
+        "surname": "Шевченко",
+        "username": "sashavsevilsocialnetwork"
+    }
+]

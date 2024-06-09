@@ -1,0 +1,9 @@
+*.db
+.env
+venv
+test.db
+invoices
+storage
+storage_tmp
+__pycache__
+admins.json
