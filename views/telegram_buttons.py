@@ -20,18 +20,18 @@ from config import (
 
 def get_caption_invoice(chat: object) -> str:
     value_start = (
-        "Ми отримали скріншот про оплату. Нижче будуть вказані данні про транзакцію:"
+        "Ми отримали скріншот про оплату, нижче будуть вказані дані про транзакцію:"
     )
-    value_id = f"*ID:* {chat.id}" if chat.id else ""
+    value_id = f"<b>ID:</b> {chat.id}" if chat.id else ""
     value_name_full = (
-        f"*Ім'я:* {full_name}"
+        f"<b>Ім'я:</b> {full_name}"
         if (full_name := ' '.join(i.strip() for i in [chat.first_name, chat.last_name] if i))
         and any(i.strip() for i in [chat.first_name, chat.last_name])
         else "Не написав ім'я"
     )
-    value_username = f"*Профіль:* @{chat.username}" if chat.username else ""
-    value_date = f'*Дата відправлення:* {datetime.now().strftime("%Y-%m-%d")}'
-    value_confirm = "Ви *підтверджуєте* що отримали гроші?"
+    value_username = f"<b>Профіль:</b> @{chat.username}" if chat.username else ""
+    value_date = f'<b>Дата відправлення:</b> {datetime.now().strftime("%Y-%m-%d")}'
+    value_confirm = "Ви <b>підтверджуєте</b> що отримали гроші?"
     return "\n".join(
         f
         for f in [
@@ -48,15 +48,15 @@ def get_caption_invoice(chat: object) -> str:
 
 def return_caption_tournament(value_dict: dict[str, str]) -> str:
     return (
-        f'*Назва: {value_dict["name"]}*\n'
-        f'*Дата проведення: {value_dict["date"]}*\n'
-        f'*Локація: {value_dict["location"]}*\n'
+        f'<b>Назва: {value_dict["name"]}</b>\n'
+        f'<b>Дата проведення: {value_dict["date"]}</b>\n'
+        f'<b>Локація: {value_dict["location"]}</b>\n'
     )
 
 
 def return_proper_description(name: str, description: str) -> str:
-    string_name = f"*{DICT_MESSAGES['name']}: {name}*"
-    string_description = f"*{DICT_MESSAGES['description']}:*\n{description}"
+    string_name = f"<b>{DICT_MESSAGES['name']}: {name}</b>"
+    string_description = f"<b>{DICT_MESSAGES['description']}:</b>\n{description}"
     return "\n".join(
         [
             string_name,

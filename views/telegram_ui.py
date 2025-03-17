@@ -8,147 +8,75 @@ from aiogram.types import (
 )
 
 from views.telegram_usage import dp, bot
-from views.telegram_buttons import (
-    return_channels,
-    return_caption_tournament,
-    return_events_next,
-    return_menu_basic,
-    get_caption_invoice,
-    return_payment_basic,
-    return_proper_description,
-    return_confirm_schedule_change,
-    return_schedule_or_payment_admins,
-    return_admins_select_list,
-    return_settings_user,
-)
-from models.db_functions import (
-    _check_admin,
-    insert_user,
-    insert_admins,
-    check_date_payed_today,
-    _get_list_admins,
-    return_admin_selected,
-    _update_dates,
-    _return_admins_list,
-    _check_coach,
-    _get_teacher_data,
-    check_user_has_admin,
-    insert_user_admins,
-    get_dates_payment,
-    return_user_info,
-)
+import views.telegram_buttons as but
+import models.db_functions as db
+import views.filters as filter
+import utilities.file_utilities as utilit
 from utilities.selenium_utilities import get_new_events
-from utilities.file_utilities import (
-    delete_old_schedules,
-    get_schedule_file,
-    get_schedule_photo,
-    get_photo_path,
-    add_new_invoice,
-    add_new_invoice_file,
-    add_new_schedule_file,
-    check_schedule_file_pdf,
-    check_schedule_file_photo,
-    # _remove_tmp_file,
-    check_invoice_file_already,
-)
-from views.filters import (
-    CheckReplyMenu,
-    CheckUsePayment,
-    CheckCancelChoice,
-    CheckConfirmSchedule,
-    CheckConfirmSchedulePhoto,
-    CheckConfirmScheduleDelete,
-    CheckContinueChannels,
-    CheckNextEvent,
-    CheckSendInvoice,
-    CheckSendInvoiceFile,
-    CheckAdminConfirm,
-    CheckAdminConfirmFile,
-    CheckAdminSelectNext,
-    CheckGetUserAdmin,
-    CheckAttachCoach,
-)
-from config import (
-    admin_notification,
-    schedule_admin_change,
-    ADMINS_DEFAULT,
-    DEFAULT_HELP,
-    DEFAULT_EVENTS,
-    DEFAULT_PAYMENT,
-    DEFAULT_SCHEDULE,
-    DEFAULT_CHANNELS,
-    DEFAULT_SETTINGS,
-    CALLBACKS,
-    DICT_ERRORS,
-    DICT_MESSAGES,
-    DEFAULT_PHOTO_NAME,
-    DEFAULT_PHOTO_USED,
-    PAYMENT_CHARACTERISTICS,
-    DICT_CAPTIONS_SCHEDULE,
-    PAYMENT_PROVIDER_TOKEN,
-)
+
+import config as cfg
 
 
 @dp.message_handler(commands=["start"])
 async def send_welcome(message: Message):
-    insert_user(message.chat)
+    db.insert_user(message.chat)
     await message.reply(
-        DICT_MESSAGES['start'],
-        reply_markup=return_menu_basic(),
+        cfg.DICT_MESSAGES['start'],
+        reply_markup=but.return_menu_basic(),
     )
-    if not check_user_has_admin(message.chat.id):
+    if not db.check_user_has_admin(message.chat.id):
         await send_coaches(message)
 
 
 async def send_coaches(message):
-    admins_db = _return_admins_list()
+    admins_db = db._return_admins_list()
     if admins_db and not message.chat.id in admins_db:
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES['admin_selection'],
-            reply_markup=return_admins_select_list(
-                _get_teacher_data(admins_db),
+            cfg.DICT_MESSAGES['admin_selection'],
+            reply_markup=but.return_admins_select_list(
+                db._get_teacher_data(admins_db),
                 message.chat.id,
             ),
         )
     elif not admins_db:
-        for admin_default in ADMINS_DEFAULT:
+        for admin_default in cfg.ADMINS_DEFAULT:
             await bot.send_message(
                 admin_default,
-                DICT_ERRORS['update_admins'],
+                cfg.DICT_ERRORS['update_admins'],
             )
 
 
 @dp.message_handler(commands=['admin_update'])
 async def update_admins(message: Message):
-    if insert_admins(message.chat.id):
+    if db.insert_admins(message.chat.id):
         await message.reply(
-            DICT_MESSAGES['confirm_admin_update'],
-            parse_mode='Markdown',
-            reply_markup=return_menu_basic(),
+            cfg.DICT_MESSAGES['confirm_admin_update'],
+            parse_mode='HTML',
+            reply_markup=but.return_menu_basic(),
         )
 
 
 @dp.message_handler(commands=['settings'])
 async def produce_user_settings(message: Message):
-    insert_user(message.chat)
-    if _check_coach(message.chat.id):
+    db.insert_user(message.chat)
+    if db._check_coach(message.chat.id):
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES['admin_settings'],
+            cfg.DICT_MESSAGES['admin_settings'],
         )
     else: 
-        id_coach_presence = check_user_has_admin(message.chat.id)
+        id_coach_presence = db.check_user_has_admin(message.chat.id)
         if id_coach_presence:
-            id_coach_presence_list = _get_teacher_data([id_coach_presence,])
+            id_coach_presence_list = db._get_teacher_data([id_coach_presence,])
             id_coach_presence_list = id_coach_presence_list[0]
         else:
             id_coach_presence_list = []
-        date_start, date_expired = get_dates_payment(message.chat.id)
+        date_start, date_expired = db.get_dates_payment(message.chat.id)
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES['settings_basic'],
-            reply_markup=return_settings_user(
+            cfg.DICT_MESSAGES['settings_basic'],
+            reply_markup=but.return_settings_user(
                 id_coach_presence_list,
                 date_start,
                 date_expired,
@@ -159,27 +87,27 @@ async def produce_user_settings(message: Message):
 @dp.message_handler(commands=['events'])
 async def send_events(message: Message):
     new_events = get_new_events()
-    value_use, markup = return_events_next(new_events)
+    value_use, markup = but.return_events_next(new_events)
     if new_events['error']:
-        for admin in _get_list_admins():
+        for admin in db._get_list_admins():
             await bot.send_message(
                 admin,
-                DICT_ERRORS['admin_schedule'],
-                parse_mode='Markdown',
-                reply_markup=return_menu_basic(),
+                cfg.DICT_ERRORS['admin_schedule'],
+                parse_mode='HTML',
+                reply_markup=but.return_menu_basic(),
             )
         await message.reply(
-            DICT_ERRORS['admin_schedule_user'],
-            parse_mode='Markdown',
-            reply_markup=return_menu_basic(),
+            cfg.DICT_ERRORS['admin_schedule_user'],
+            parse_mode='HTML',
+            reply_markup=but.return_menu_basic(),
         )
     else:
         await bot.send_photo(
                 message.chat.id,
                 value_use['photo'],
-                caption = return_caption_tournament(value_use),
+                caption = but.return_caption_tournament(value_use),
                 reply_markup=markup,
-                parse_mode="Markdown",
+                parse_mode="HTML",
             )
 
 
@@ -188,71 +116,71 @@ async def send_payment(message: Message):
     #TODO continue from here to change values
     await bot.send_message(
         message.chat.id,
-        DICT_MESSAGES['payment_start'],
-        parse_mode='Markdown',
-        reply_markup=return_payment_basic(),
+        cfg.DICT_MESSAGES['payment_start'],
+        parse_mode='HTML',
+        reply_markup=but.return_payment_basic(),
     )
 
 
 @dp.message_handler(content_types=[ContentType.DOCUMENT])
 async def check_working_new_scheduler(message: Message):
     document_name = message.document.file_name
-    if is_coach:=_check_coach(message.chat.id):
+    if is_coach:=db._check_coach(message.chat.id):
         if (
-            not check_schedule_file_pdf(document_name)
-            and not check_schedule_file_photo(document_name)
+            not utilit.check_schedule_file_pdf(document_name)
+            and not utilit.check_schedule_file_photo(document_name)
         ):
             await bot.send_message(
                 message.chat.id,
-                DICT_ERRORS["file_send"],
+                cfg.DICT_ERRORS["file_send"],
                 reply_to_message_id=message.message_id,
-                reply_markup=return_menu_basic(),
+                reply_markup=but.return_menu_basic(),
             )
             return
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES["confirmation_schedule"],
+            cfg.DICT_MESSAGES["confirmation_schedule"],
             reply_to_message_id=message.message_id,
-            reply_markup=return_confirm_schedule_change(),
+            reply_markup=but.return_confirm_schedule_change(),
         )
-    elif not is_coach and _check_admin(message.chat.id):
+    elif not is_coach and db._check_admin(message.chat.id):
         if (
-            not check_schedule_file_pdf(document_name)
-            and not check_schedule_file_photo(document_name)
+            not utilit.check_schedule_file_pdf(document_name)
+            and not utilit.check_schedule_file_photo(document_name)
         ):
             await bot.send_message(
                 message.chat.id,
-                DICT_ERRORS["file_send"],
+                cfg.DICT_ERRORS["file_send"],
                 reply_to_message_id=message.message_id,
-                reply_markup=return_menu_basic(),
+                reply_markup=but.return_menu_basic(),
             )
             return
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES['selection_admin_schedule_payment'],
+            cfg.DICT_MESSAGES['selection_admin_schedule_payment'],
             reply_to_message_id=message.message_id,
-            reply_markup=return_schedule_or_payment_admins(
-                CALLBACKS["send_invoice_file"],
-                CALLBACKS["schedule"],
+            reply_markup=but.return_schedule_or_payment_admins(
+                cfg.CALLBACKS["send_invoice_file"],
+                cfg.CALLBACKS["schedule"],
             ),
         )
-    elif check_user_has_admin(message.chat.id):
+    elif db.check_user_has_admin(message.chat.id):
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES["confirmation_send"],
+            cfg.DICT_MESSAGES["confirmation_send"],
             reply_to_message_id=message.message_id,
-            reply_markup=return_confirm_schedule_change(
-                CALLBACKS["send_invoice_file"]
+            reply_markup=but.return_confirm_schedule_change(
+                cfg.CALLBACKS["send_invoice_file"]
             ),
         )
     else:
-        admins_db = _return_admins_list()
+        admins_db = db._return_admins_list()
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES['user_attach_coach'],
+            cfg.DICT_MESSAGES['user_attach_coach'],
             reply_to_message_id=message.message_id,
-            reply_markup=return_admins_select_list(
-                _get_teacher_data(admins_db),
+            reply_markup=but.return_admins_select_list(
+                db._get_teacher_data(admins_db),
                 message.chat.id,
             ),
         )
@@ -260,38 +188,42 @@ async def check_working_new_scheduler(message: Message):
 
 @dp.message_handler(content_types=[ContentType.PHOTO])
 async def send_schedule_payment_check(message: Message):
-    if is_coach:=_check_coach(message.chat.id):
+    if is_coach:=db._check_coach(message.chat.id):
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES["confirmation_schedule"],
+            cfg.DICT_MESSAGES["confirmation_schedule"],
             reply_to_message_id=message.message_id,
-            reply_markup=return_confirm_schedule_change(CALLBACKS["schedule_photo"]),
-        )
-    elif not is_coach and _check_admin(message.chat.id):
-        await bot.send_message(
-            message.chat.id,
-            DICT_MESSAGES['selection_admin_schedule_payment'],
-            reply_to_message_id=message.message_id,
-            reply_markup=return_schedule_or_payment_admins(
-                CALLBACKS["send_invoice"],
-                CALLBACKS["schedule_photo"],
+            reply_markup=but.return_confirm_schedule_change(
+                cfg.CALLBACKS["schedule_photo"],
             ),
         )
-    elif check_user_has_admin(message.chat.id):
+    elif not is_coach and db._check_admin(message.chat.id):
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES["confirmation_send"],
+            cfg.DICT_MESSAGES['selection_admin_schedule_payment'],
             reply_to_message_id=message.message_id,
-            reply_markup=return_confirm_schedule_change(CALLBACKS["send_invoice"]),
+            reply_markup=but.return_schedule_or_payment_admins(
+                cfg.CALLBACKS["send_invoice"],
+                cfg.CALLBACKS["schedule_photo"],
+            ),
+        )
+    elif db.check_user_has_admin(message.chat.id):
+        await bot.send_message(
+            message.chat.id,
+            cfg.DICT_MESSAGES["confirmation_send"],
+            reply_to_message_id=message.message_id,
+            reply_markup=but.return_confirm_schedule_change(
+                cfg.CALLBACKS["send_invoice"],
+            ),
         )
     else:
-        admins_db = _return_admins_list()
+        admins_db = db._return_admins_list()
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES['user_attach_coach'],
+            cfg.DICT_MESSAGES['user_attach_coach'],
             reply_to_message_id=message.message_id,
-            reply_markup=return_admins_select_list(
-                _get_teacher_data(admins_db),
+            reply_markup=but.return_admins_select_list(
+                db._get_teacher_data(admins_db),
                 message.chat.id,
             ),
         )
@@ -299,64 +231,64 @@ async def send_schedule_payment_check(message: Message):
 
 @dp.message_handler(commands=["schedule"])
 async def send_schedule(message: Message):
-    file_name, file_original = get_schedule_file()
+    file_name, file_original = utilit.get_schedule_file()
     if file_name:
         with open(file_name, "rb") as file_schedule:
-            if check_schedule_file_pdf(file_name):
+            if utilit.check_schedule_file_pdf(file_name):
                 await bot.send_document(
                     message.chat.id,
                     file_schedule,
-                    caption=DICT_CAPTIONS_SCHEDULE[file_original],
+                    caption=cfg.DICT_CAPTIONS_SCHEDULE[file_original],
                 )
-            elif check_schedule_file_photo(file_name):
+            elif utilit.check_schedule_file_photo(file_name):
                 await bot.send_photo(
                     message.chat.id,
                     file_schedule,
-                    caption=DICT_CAPTIONS_SCHEDULE[file_original],
+                    caption=cfg.DICT_CAPTIONS_SCHEDULE[file_original],
                 )
     else:
         await bot.send_message(
             message.chat.id,
-            DICT_CAPTIONS_SCHEDULE["Mistake"],
+            cfg.DICT_CAPTIONS_SCHEDULE["Mistake"],
             reply_to_message_id=message.message_id,
-            reply_markup=return_menu_basic(),
+            reply_markup=but.return_menu_basic(),
         )
-        for admin in _get_list_admins():
+        for admin in db._get_list_admins():
             await bot.send_message(
                 admin,
-                DICT_ERRORS['admin_filename'],
-                parse_mode='Markdown',
-                reply_markup=return_menu_basic(),
+                cfg.DICT_ERRORS['admin_filename'],
+                parse_mode='HTML',
+                reply_markup=but.return_menu_basic(),
             )
 
 
 @dp.message_handler(commands=["schedule_delete"])
 async def produce_delete_old_schedules(message: Message):
-    if _check_admin(message.chat.id):
+    if db._check_admin(message.chat.id):
         await bot.send_message(
             message.chat.id,
-            DICT_MESSAGES["confirmation_schedule_delete"],
+            cfg.DICT_MESSAGES["confirmation_schedule_delete"],
             reply_to_message_id=message.message_id,
-            reply_markup=return_confirm_schedule_change(
-                CALLBACKS["schedule_delete"],
+            reply_markup=but.return_confirm_schedule_change(
+                cfg.CALLBACKS["schedule_delete"],
             ),
         )
 
 
 @dp.message_handler(commands=["channels"])
 async def send_channels(message: Message):
-    dict_use, reply_markups = return_channels()
-    photo_used = p if (p := dict_use.get("photo")) else DEFAULT_PHOTO_USED
-    with open(get_photo_path(photo_used), "rb") as file_photo:
+    dict_use, reply_markups = but.return_channels()
+    photo_used = p if (p := dict_use.get("photo")) else cfg.DEFAULT_PHOTO_USED
+    with open(utilit.get_photo_path(photo_used), "rb") as file_photo:
         await bot.send_photo(
             message.chat.id,
             file_photo,
-            caption=return_proper_description(
+            caption=but.return_proper_description(
                 dict_use["name"],
                 dict_use["description"],
             ),
             reply_markup=reply_markups,
-            parse_mode="Markdown",
+            parse_mode="HTML",
         )
 
 
@@ -364,16 +296,16 @@ async def send_channels(message: Message):
 async def produce_help(message: Message):
     await bot.send_message(
         message.chat.id,
-        DICT_MESSAGES['help_basic'],
+        cfg.DICT_MESSAGES['help_basic'],
     )
 
 
-@dp.callback_query_handler(CheckConfirmSchedule())
+@dp.callback_query_handler(filter.CheckConfirmSchedule())
 async def produce_schedule_change(call: CallbackQuery) -> None:
     document_name = call.message.reply_to_message.document.file_name
     file_info = await bot.get_file(call.message.reply_to_message.document.file_id)
     downloaded_file = await bot.download_file(file_info.file_path)
-    full_path = add_new_schedule_file(document_name)
+    full_path = utilit.add_new_schedule_file(document_name)
     with open(full_path, "wb") as new_file:
         new_file.write(downloaded_file.getvalue())
     await bot.edit_message_reply_markup(
@@ -381,19 +313,19 @@ async def produce_schedule_change(call: CallbackQuery) -> None:
         call.message.message_id,
         reply_markup=None,
     )
-    x = return_user_info(call.message.chat.id)
+    x = db.return_user_info(call.message.chat.id)
     x = ' '.join(z.strip() for z in x[1:] if z) + f'(ID: {x[0]})'
-    for i in _get_list_admins():
+    for i in db._get_list_admins():
         await bot.send_message(
             i,
-            schedule_admin_change(x),
+            cfg.schedule_admin_change(x),
         )
 
 
-@dp.callback_query_handler(CheckConfirmScheduleDelete())
+@dp.callback_query_handler(filter.CheckConfirmScheduleDelete())
 async def produce_schedule_delete(call: CallbackQuery) -> None:
-    if _check_admin(call.message.chat.id):
-        delete_old_schedules()
+    if db._check_admin(call.message.chat.id):
+        utilit.delete_old_schedules()
         await bot.edit_message_reply_markup(
             call.message.chat.id,
             call.message.message_id,
@@ -401,20 +333,20 @@ async def produce_schedule_delete(call: CallbackQuery) -> None:
         )
 
 
-@dp.callback_query_handler(CheckGetUserAdmin())
+@dp.callback_query_handler(filter.CheckGetUserAdmin())
 async def produce_user_admin_connection(call: CallbackQuery) -> None:
     _, id_user, id_admin = call.data.split('_')
     id_user, id_admin = int(id_user), int(id_admin)
-    insert_user_admins(id_user, id_admin)
+    db.insert_user_admins(id_user, id_admin)
     await bot.edit_message_text(
-        DICT_MESSAGES['admin_selected'],
+        cfg.DICT_MESSAGES['admin_selected'],
         call.message.chat.id,
         call.message.message_id,
         reply_markup=None,
     )
 
 
-@dp.callback_query_handler(CheckCancelChoice())
+@dp.callback_query_handler(filter.CheckCancelChoice())
 async def produce_cancel_choice(call: CallbackQuery) -> None:
     await bot.edit_message_reply_markup(
         call.message.chat.id,
@@ -423,30 +355,32 @@ async def produce_cancel_choice(call: CallbackQuery) -> None:
     )
 
 
-@dp.callback_query_handler(CheckConfirmSchedulePhoto())
+@dp.callback_query_handler(filter.CheckConfirmSchedulePhoto())
 async def produce_schedule_change_photo(call: CallbackQuery) -> None:
-    full_path = add_new_schedule_file(get_schedule_photo(DEFAULT_PHOTO_NAME))
+    full_path = utilit.add_new_schedule_file(
+        utilit.get_schedule_photo(cfg.DEFAULT_PHOTO_NAME)
+    )
     await call.message.reply_to_message.photo[-1].download(destination_file=full_path)
     await bot.edit_message_reply_markup(
         call.message.chat.id,
         call.message.message_id,
         reply_markup=None,
     )
-    x = return_user_info(call.message.chat.id)
+    x = db.return_user_info(call.message.chat.id)
     x = ' '.join(z.strip() for z in x[1:] if z) + f'(ID: {x[0]})'
-    for i in _get_list_admins():
+    for i in db._get_list_admins():
         await bot.send_message(
             i,
-            schedule_admin_change(x),
+            cfg.schedule_admin_change(x),
         )
 
 
-@dp.callback_query_handler(CheckContinueChannels())
+@dp.callback_query_handler(filter.CheckContinueChannels())
 async def produce_change_channel(call: CallbackQuery) -> None:
     index_use = int(call.data.split("_")[1])
-    dict_use, reply_markups = return_channels(index_use)
-    photo_used = p if (p := dict_use.get("photo")) else DEFAULT_PHOTO_USED
-    with open(get_photo_path(photo_used), "rb") as file_photo:
+    dict_use, reply_markups = but.return_channels(index_use)
+    photo_used = p if (p := dict_use.get("photo")) else cfg.DEFAULT_PHOTO_USED
+    with open(utilit.get_photo_path(photo_used), "rb") as file_photo:
         new_photo = InputMediaPhoto(file_photo)
         await bot.edit_message_media(
             chat_id=call.message.chat.id,
@@ -457,19 +391,19 @@ async def produce_change_channel(call: CallbackQuery) -> None:
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
             reply_markup=reply_markups,
-            caption=return_proper_description(
+            caption=but.return_proper_description(
                 dict_use["name"],
                 dict_use["description"],
             ),
-            parse_mode="Markdown",
+            parse_mode="HTML",
         )
 
 
-@dp.callback_query_handler(CheckNextEvent())
+@dp.callback_query_handler(filter.CheckNextEvent())
 async def produce_next_event(call: CallbackQuery) -> None:
     index_use = int(call.data.split("_")[1])
     new_events = get_new_events()
-    value_use, markup = return_events_next(new_events, index_use)
+    value_use, markup = but.return_events_next(new_events, index_use)
     new_photo = InputMediaPhoto(value_use['photo'])
     await bot.edit_message_media(
         chat_id=call.message.chat.id,
@@ -479,45 +413,45 @@ async def produce_next_event(call: CallbackQuery) -> None:
     await bot.edit_message_caption(
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
-        caption = return_caption_tournament(value_use),
+        caption = but.return_caption_tournament(value_use),
         reply_markup=markup,
-        parse_mode="Markdown",
+        parse_mode="HTML",
     )
 
 
-@dp.callback_query_handler(CheckAdminSelectNext())
+@dp.callback_query_handler(filter.CheckAdminSelectNext())
 async def produce_next_event(call: CallbackQuery) -> None:
     index_use = int(call.data.split("_")[1])
-    admins_db = _return_admins_list()
+    admins_db = db._return_admins_list()
     await bot.edit_message_reply_markup(
         call.message.chat.id,
         call.message.message_id,
-        reply_markup=return_admins_select_list(
-            _get_teacher_data(admins_db),
+        reply_markup=but.return_admins_select_list(
+            db._get_teacher_data(admins_db),
             call.message.chat.id,
             index_use,
         ),
     )
 
 
-@dp.callback_query_handler(CheckAdminConfirm())
+@dp.callback_query_handler(filter.CheckAdminConfirm())
 async def produce_admin_confirm_invoice(call: CallbackQuery) -> None:
     """Produce confirmation for the admin of the pictures"""
     value_id_user = int(call.data.split('_')[-1])
-    if check_date_payed_today(value_id_user):#check_invoice_file_already(value_id_user):
+    if db.check_date_payed_today(value_id_user):#check_invoice_file_already(value_id_user):
         await bot.edit_message_caption(
             call.message.chat.id,
             call.message.message_id,
-            caption=DICT_MESSAGES['confirmation_already'],
+            caption=cfg.DICT_MESSAGES['confirmation_already'],
             reply_markup=None
         )
         await bot.send_message(
             value_id_user,
-            DICT_MESSAGES['confirmation_db'],
-            reply_markup=return_menu_basic(),
+            cfg.DICT_MESSAGES['confirmation_db'],
+            reply_markup=but.return_menu_basic(),
         )
     else:
-        full_path = add_new_invoice(
+        full_path = utilit.add_new_invoice(
             value_id_user,
             call.message.chat.id,
             False
@@ -528,45 +462,46 @@ async def produce_admin_confirm_invoice(call: CallbackQuery) -> None:
         await bot.edit_message_caption(
             call.message.chat.id,
             call.message.message_id,
-            caption=DICT_MESSAGES['confirmation_success_admin'],
+            caption=cfg.DICT_MESSAGES['confirmation_success_admin'],
             reply_markup=None
         )
         await bot.send_message(
             value_id_user,
-            DICT_MESSAGES['confirmation_success_user'],
-            reply_markup=return_menu_basic(),
+            cfg.DICT_MESSAGES['confirmation_success_user'],
+            reply_markup=but.return_menu_basic(),
         )
-        _update_dates(value_id_user)
-        x = return_user_info(value_id_user)
+        db._update_dates(value_id_user)
+        x = db.return_user_info(value_id_user)
         x = ' '.join(z.strip() for z in x[1:] if z) + f'(ID: {x[0]})'
-        y = return_user_info(call.message.chat.id)
+        y = db.return_user_info(call.message.chat.id)
         y = ' '.join(z.strip() for z in y[1:] if z) + f'(ID: {y[0]})'
-        for i in _get_list_admins():
+
+        for i in db._get_list_admins():
             await bot.send_message(
                 i,
-                admin_notification(x, y),
-                reply_markup=return_menu_basic(),
+                cfg.admin_notification(x, y),
+                reply_markup=but.return_menu_basic(),
             )
 
 
-@dp.callback_query_handler(CheckAdminConfirmFile())
+@dp.callback_query_handler(filter.CheckAdminConfirmFile())
 async def produce_admin_confirm_invoice_file(call: CallbackQuery) -> None:
     """Produce confirmation for the admin of the files"""
     value_id_user = int(call.data.split('_')[-1])
-    if check_date_payed_today(value_id_user):#check_invoice_file_already(value_id_user):
+    if db.check_date_payed_today(value_id_user):#check_invoice_file_already(value_id_user):
         await bot.edit_message_caption(
             call.message.chat.id,
             call.message.message_id,
-            caption=DICT_MESSAGES['confirmation_already'],
+            caption=cfg.DICT_MESSAGES['confirmation_already'],
             reply_markup=None
         )
         await bot.send_message(
             value_id_user,
-            DICT_MESSAGES['confirmation_db'],
-            reply_markup=return_menu_basic(),
+            cfg.DICT_MESSAGES['confirmation_db'],
+            reply_markup=but.return_menu_basic(),
         )
     else:
-        full_path = add_new_invoice_file(
+        full_path = utilit.add_new_invoice_file(
             value_id_user,
             call.message.chat.id,
         )
@@ -577,32 +512,32 @@ async def produce_admin_confirm_invoice_file(call: CallbackQuery) -> None:
         await bot.edit_message_caption(
             call.message.chat.id,
             call.message.message_id,
-            caption=DICT_MESSAGES['confirmation_success_admin'],
+            caption=cfg.DICT_MESSAGES['confirmation_success_admin'],
             reply_markup=None
         )
         await bot.send_message(
             value_id_user,
-            DICT_MESSAGES['confirmation_success_user'],
-            reply_markup=return_menu_basic(),
+            cfg.DICT_MESSAGES['confirmation_success_user'],
+            reply_markup=but.return_menu_basic(),
         )
-        _update_dates(value_id_user)
-        x = return_user_info(value_id_user)
+        db._update_dates(value_id_user)
+        x = db.return_user_info(value_id_user)
         x = ' '.join(z.strip() for z in x[1:] if z) + f'(ID: {x[0]})'
-        y = return_user_info(call.message.chat.id)
+        y = db.return_user_info(call.message.chat.id)
         y = ' '.join(z.strip() for z in y[1:] if z) + f'(ID: {y[0]})'
-        for i in _get_list_admins():
+        for i in db._get_list_admins():
             await bot.send_message(
                 i,
-                admin_notification(x, y),
-                reply_markup=return_menu_basic(),
+                cfg.admin_notification(x, y),
+                reply_markup=but.return_menu_basic(),
             )
 
 
-@dp.callback_query_handler(CheckSendInvoice())
+@dp.callback_query_handler(filter.CheckSendInvoice())
 async def produce_sending_invoice_admin(call: CallbackQuery) -> None:
-    admin_send = return_admin_selected(call.message.chat.id)
+    admin_send = db.return_admin_selected(call.message.chat.id)
     await bot.edit_message_text(
-        DICT_MESSAGES["confirmation_send_user"],
+        cfg.DICT_MESSAGES["confirmation_send_user"],
         call.message.chat.id,
         call.message.message_id,
         reply_markup=None,
@@ -610,65 +545,70 @@ async def produce_sending_invoice_admin(call: CallbackQuery) -> None:
     await bot.send_photo(
         chat_id=admin_send,
         photo=call.message.reply_to_message.photo[-1].file_id,
-        caption=get_caption_invoice(call.message.chat),
-        reply_markup=return_confirm_schedule_change(
-            f'{CALLBACKS["receive_invoice"]}_{call.message.chat.id}',
+        caption=but.get_caption_invoice(call.message.chat),
+        reply_markup=but.return_confirm_schedule_change(
+            f'{cfg.CALLBACKS["receive_invoice"]}_{call.message.chat.id}',
         ),
-        parse_mode="Markdown",
+        parse_mode="HTML",
     )
 
 
-@dp.callback_query_handler(CheckSendInvoiceFile())
+@dp.callback_query_handler(filter.CheckSendInvoiceFile())
 async def produce_sending_invoice_admin_file(call: CallbackQuery) -> None:
     """Function for the sending for the admin invoice to check"""
-    admin_send = return_admin_selected(call.message.chat.id)
+    admin_send = db.return_admin_selected(call.message.chat.id)
     await bot.edit_message_text(
-        DICT_MESSAGES["confirmation_send_user"],
+        cfg.DICT_MESSAGES["confirmation_send_user"],
         call.message.chat.id,
         call.message.message_id,
         reply_markup=None,
     )
-    if not check_schedule_file_pdf(
+    if not utilit.check_schedule_file_pdf(
         call.message.reply_to_message.document.file_name
     ):
         await bot.send_message(
             call.message.chat.id,
-            DICT_MESSAGES['confirmation_file_error'],
-            reply_markup=return_menu_basic(),
+            cfg.DICT_MESSAGES['confirmation_file_error'],
+            reply_markup=but.return_menu_basic(),
         )
     else:
         await bot.send_document(
             admin_send,
             call.message.reply_to_message.document.file_id,
-            caption=get_caption_invoice(call.message.chat),
-            reply_markup=return_confirm_schedule_change(
-                f'{CALLBACKS["receive_invoice_file"]}_{call.message.chat.id}',
+            caption=but.get_caption_invoice(call.message.chat),
+            reply_markup=but.return_confirm_schedule_change(
+                f'{cfg.CALLBACKS["receive_invoice_file"]}_{call.message.chat.id}',
             ),
-            parse_mode="Markdown",
+            parse_mode="HTML",
         )
  
 
-@dp.callback_query_handler(CheckAttachCoach())
+@dp.callback_query_handler(filter.CheckAttachCoach())
 async def produce_user_coach_attachment(call: CallbackQuery) -> None:
     await send_coaches(call.message)
 
 
-@dp.callback_query_handler(CheckUsePayment())
+@dp.callback_query_handler(filter.CheckUsePayment())
 async def produce_send_invoice(call: CallbackQuery) -> None:
     #TODO continue working from here
-    if call.data == CALLBACKS['hire_gi']:
+    if call.data == cfg.CALLBACKS['hire_gi']:
         call_data = 'hire_gi'
-    elif call.data == CALLBACKS['buy_water_big']:
+    elif call.data == cfg.CALLBACKS['buy_water_big']:
         call_data = 'buy_water_big'
-    elif call.data == CALLBACKS['buy_water_small']:
+    elif call.data == cfg.CALLBACKS['buy_water_small']:
         call_data = 'buy_water_small'
-    elif call.data == CALLBACKS['buy_one_pass']:
+    elif call.data == cfg.CALLBACKS['buy_one_pass']:
         call_data = 'buy_one_pass'
+    
+    print(call)
+    print('5555555555555555555555555555555555555555555555')
+    print('5555555555555555555555555555555555555555555555')
+    print('5555555555555555555555555555555555555555555555')
     await bot.send_invoice(
         call.message.chat.id,
-        title=DICT_MESSAGES[call_data],
-        description=PAYMENT_CHARACTERISTICS[call_data]['description'],
-        provider_token = PAYMENT_PROVIDER_TOKEN,
+        title=cfg.DICT_MESSAGES[call_data],
+        description=cfg.PAYMENT_CHARACTERISTICS[call_data]['description'],
+        provider_token = cfg.PAYMENT_PROVIDER_TOKEN,
         currency='uah',
         # photo_url='https://telegra.ph/file/d08ff863531f10bf2ea4b.jpg',
         photo_height=512,
@@ -676,44 +616,50 @@ async def produce_send_invoice(call: CallbackQuery) -> None:
         photo_size=512,
         prices=[
             LabeledPrice(
-                label=DICT_MESSAGES[call_data],
-                amount=PAYMENT_CHARACTERISTICS[call_data]['price']
+                label=cfg.DICT_MESSAGES[call_data],
+                amount=cfg.PAYMENT_CHARACTERISTICS[call_data]['price']
             ),
         ],
-        payload=PAYMENT_CHARACTERISTICS[call_data]['payload'],
+        payload=cfg.PAYMENT_CHARACTERISTICS[call_data]['payload'],
     )
 
 
-@dp.message_handler(CheckReplyMenu())
+@dp.message_handler(filter.CheckReplyMenu())
 async def develop_menu_reaction(message: Message):
-    if message.text == DEFAULT_SCHEDULE:
+    if message.text == cfg.DEFAULT_SCHEDULE:
         await send_schedule(message)
 
-    if message.text == DEFAULT_CHANNELS:
+    if message.text == cfg.DEFAULT_CHANNELS:
         await send_channels(message)
 
-    if message.text == DEFAULT_PAYMENT:
+    if message.text == cfg.DEFAULT_PAYMENT:
         await send_payment(message)
 
-    if message.text == DEFAULT_EVENTS:
+    if message.text == cfg.DEFAULT_EVENTS:
         await send_events(message)
 
-    if message.text == DEFAULT_SETTINGS:
+    if message.text == cfg.DEFAULT_SETTINGS:
         await produce_user_settings(message)
 
-    if message.text == DEFAULT_HELP:
+    if message.text == cfg.DEFAULT_HELP:
         await produce_help(message)
 
 
 # pre checkout  (must be answered in 10 seconds)
 @dp.pre_checkout_query_handler(lambda query: True)
 async def pre_checkout_query(pre_checkout_q: PreCheckoutQuery):
+    print(pre_checkout_q)
+    print('11111111111111155555555555555555555555555555555555')
+    print('11111111111111155555555555555555555555555555555555')
+    print('11111111111111155555555555555555555555555555555555')
     await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
 
 
 # successful payment
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
 async def successful_payment(message: Message):
+    print(message)
+    print()
     print("SUCCESSFUL PAYMENT:")
     payment_info = message.successful_payment.to_python()
     print(payment_info)
