@@ -25,7 +25,11 @@ def get_caption_invoice(chat: object) -> str:
     value_id = f"<b>ID:</b> {chat.id}" if chat.id else ""
     value_name_full = (
         f"<b>Ім'я:</b> {full_name}"
-        if (full_name := ' '.join(i.strip() for i in [chat.first_name, chat.last_name] if i))
+        if (
+            full_name := " ".join(
+                i.strip() for i in [chat.first_name, chat.last_name] if i
+            )
+        )
         and any(i.strip() for i in [chat.first_name, chat.last_name])
         else "Не написав ім'я"
     )
@@ -162,23 +166,23 @@ def return_schedule_or_payment_admins(callback_invoice, callback_schedule):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=DICT_MESSAGES['confirm_admin_send_screen'],
+                    text=DICT_MESSAGES["confirm_admin_send_screen"],
                     callback_data=callback_invoice,
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text=DICT_MESSAGES['confirm_admin_schedule_change'],
+                    text=DICT_MESSAGES["confirm_admin_schedule_change"],
                     callback_data=callback_schedule,
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text=DICT_MESSAGES['cancelation'],
+                    text=DICT_MESSAGES["cancelation"],
                     callback_data=CALLBACKS["cancelation"],
                 ),
             ],
-        ]
+        ],
     )
 
 
@@ -194,26 +198,25 @@ def return_settings_user(
             [
                 [
                     InlineKeyboardButton(
-                        'Ваш тренер:',
+                        "Ваш тренер:",
                         callback_data="None",
                     ),
                     InlineKeyboardButton(
-                        ' '.join(
+                        " ".join(
                             i.strip()
-                            for i
-                            in [
+                            for i in [
                                 coach_name,
                                 coach_last,
                             ]
                             if i
                         ),
-                        callback_data='None',
+                        callback_data="None",
                     ),
                 ],
                 [
                     InlineKeyboardButton(
-                        'Змінити Тренера',
-                        callback_data=CALLBACKS['admin_attach'],
+                        "Змінити Тренера",
+                        callback_data=CALLBACKS["admin_attach"],
                     ),
                 ],
             ]
@@ -223,8 +226,8 @@ def return_settings_user(
             [
                 [
                     InlineKeyboardButton(
-                        'Вказати Тренера',
-                        callback_data=CALLBACKS['admin_attach'],
+                        "Вказати Тренера",
+                        callback_data=CALLBACKS["admin_attach"],
                     ),
                 ],
             ]
@@ -233,24 +236,24 @@ def return_settings_user(
         [
             [
                 InlineKeyboardButton(
-                    'Дата оплати:',
+                    "Дата оплати:",
                     callback_data="None",
                 ),
                 InlineKeyboardButton(
-                    date_start if date_start else 'Не оплачено',
+                    date_start if date_start else "Не оплачено",
                     callback_data="None",
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    'Закінчується:',
+                    "Закінчується:",
                     callback_data="None",
                 ),
                 InlineKeyboardButton(
-                    date_expired if date_expired else 'Не оплачено',
+                    date_expired if date_expired else "Не оплачено",
                     callback_data="None",
                 ),
-            ]
+            ],
         ]
     )
     return InlineKeyboardMarkup(
@@ -282,12 +285,11 @@ def return_admins_select_list(
             id_admin,
             name,
             surname,
-        )
-        in list_admins[index_use]
+        ) in list_admins[index_use]
     ]
     if len(list_admins) > 1:
         list_buttons.append(
-        [
+            [
                 InlineKeyboardButton(
                     text="⬅️",
                     callback_data=f'{CALLBACKS["admin_next"]}_{value_prev}',
@@ -357,4 +359,87 @@ def return_menu_basic() -> object:
             ],
         ],
         one_time_keyboard=False,
+    )
+
+
+# TODO continue work from here
+def return_menu_coach(admin_id: int) -> object:
+    list_produce = [
+        [
+            InlineKeyboardButton(DICT_MESSAGES["paid_fully"], callback_data="None"),
+            InlineKeyboardButton("✅", callback_data="None"),
+        ],
+        [
+            InlineKeyboardButton(DICT_MESSAGES["paid_partly"], callback_data="None"),
+            InlineKeyboardButton("✅", callback_data="None"),
+        ],
+        [
+            InlineKeyboardButton(DICT_MESSAGES["paid_failed"], callback_data="None"),
+            InlineKeyboardButton("✅", callback_data="None"),
+        ],
+        [
+            InlineKeyboardButton(DICT_MESSAGES["paid_long_time"], callback_data="None"),
+            InlineKeyboardButton("✅", callback_data="None"),
+        ],
+        [
+            InlineKeyboardButton(
+                "Показати",
+                callback_data=f"{CALLBACKS['student_show']}_{admin_id}",
+            ),
+        ],
+    ]
+    return InlineKeyboardMarkup(
+        row_width=3,
+        inline_keyboard=list_produce,
+    )
+
+
+def return_payment_coach(
+    list_students: list, id_admin: int, index_use: int = 0
+) -> object:
+    list_students = make_chunks(list_students, 3)
+    len_students = len(list_students)
+    value_prev = index_use - 1
+    value_next = index_use + 1
+    if value_next > len(list_students) - 1:
+        value_next = value_next % len(list_students)
+    if value_prev < 0:
+        value_prev = value_prev % len(list_students)
+    list_buttons = [
+        [
+            InlineKeyboardButton(DICT_MESSAGES["name_user"], callback_data="None"),
+            InlineKeyboardButton(DICT_MESSAGES["payment_status"], callback_data="None"),
+            InlineKeyboardButton(DICT_MESSAGES["payment_date"], callback_data="None"),
+        ],
+    ]
+    list_buttons.extend(
+        [
+            [
+                InlineKeyboardButton(text=username, url=f"tg://user?id={id_tg}"),
+                InlineKeyboardButton(text=status, callback_data="None"),
+                InlineKeyboardButton(text=date_expand, callback_data="None"),
+            ]
+            for id_tg, username, status, date_expand in list_students[len_students - 1]
+        ]
+    )
+    if len_students > 1:
+        list_buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="⬅️",
+                    callback_data=f'{CALLBACKS["student_next"]}_{id_admin}_{value_prev}',
+                ),
+                InlineKeyboardButton(
+                    text=f"{index_use + 1} / {len(list_students)}",
+                    callback_data="None",
+                ),
+                InlineKeyboardButton(
+                    text="➡️",
+                    callback_data=f'{CALLBACKS["student_next"]}_{id_admin}_{value_next}',
+                ),
+            ]
+        )
+    return InlineKeyboardMarkup(
+        row_width=3,
+        inline_keyboard=list_buttons,
     )

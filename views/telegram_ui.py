@@ -13,6 +13,10 @@ import models.db_functions as db
 import views.filters as filter
 import utilities.file_utilities as utilit
 from utilities.selenium_utilities import get_new_events
+from utilities.utils import (
+    produce_status,
+    produce_sorting_by_date_by_name,
+)
 
 import config as cfg
 
@@ -61,9 +65,12 @@ async def update_admins(message: Message):
 async def produce_user_settings(message: Message):
     db.insert_user(message.chat)
     if db._check_coach(message.chat.id):
+        #TODO add here new settings !!!
         await bot.send_message(
             message.chat.id,
-            cfg.DICT_MESSAGES['admin_settings'],
+            cfg.DICT_MESSAGES["menu"],
+            parse_mode='HTML',
+            reply_markup=but.return_menu_coach(message.chat.id),
         )
     else: 
         id_coach_presence = db.check_user_has_admin(message.chat.id)
@@ -298,6 +305,26 @@ async def produce_help(message: Message):
         message.chat.id,
         cfg.DICT_MESSAGES['help_basic'],
     )
+
+
+@dp.callback_query_handler(filter.CheckAdminShowPerson())
+async def produce_show_students(call: CallbackQuery) -> None:
+    _, id_admin = call.data.split('_')
+    if not (list_students := db.return_coach_students(id_admin)):
+        await bot.send_message(
+            id_admin,
+            cfg.DICT_MESSAGES['admin_settings'],
+        )
+    else:
+        #TODO add here sorting after
+        list_students = produce_sorting_by_date_by_name(list_students)
+        list_students = produce_status(list_students)
+        await bot.send_message(
+            id_admin,
+            cfg.DICT_MESSAGES["coach_settings"],
+            parse_mode='HTML',
+            reply_markup=but.return_payment_coach(list_students, id_admin),
+        )
 
 
 @dp.callback_query_handler(filter.CheckConfirmSchedule())

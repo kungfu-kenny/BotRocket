@@ -72,6 +72,17 @@ class User(Base):
         return f"User(id={self.id!r}, name={self.name!r}, surname={self.surname!r}, username={self.username!r}, admin={self.is_admin!r})"
 
 
+# TODO continue work from here
+# class AdminSettings(Base):
+#     __tablename__ = 'admin_settings'
+#     id: Mapped[int]
+
+
+#TODO work after here
+# class UserPass(Base):
+#     __tablename__ = 'user_season_pass'
+
+
 class ShopList(Base):
     __tablename__ = 'shop_list'
     id: Mapped[int] = mapped_column(primary_key=True)

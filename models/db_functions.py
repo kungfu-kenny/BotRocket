@@ -61,7 +61,11 @@ def _check_admin(value_id: int) -> bool:
 def return_user_info(value_id: int) -> str:
     user_info = []
     with db_session() as conn:
-        user_info = conn.query(User.id, User.name, User.surname).filter_by(id=value_id).one()
+        user_info = conn.query(
+            User.id,
+            User.name,
+            User.surname,
+        ).filter_by(id=value_id).one()
     return user_info
 
 
@@ -130,9 +134,13 @@ def check_user_has_admin(id_user, conn: object=None):
     value_id = None
     if not conn:
         with db_session() as conn:
-            value_id = conn.query(UserAdmins.id_admin).filter_by(id_user=id_user).all()
+            value_id = conn.query(
+                UserAdmins.id_admin,
+            ).filter_by(id_user=id_user).all()
     else:
-        value_id = conn.query(UserAdmins.id_admin).filter_by(id_user=id_user).all()
+        value_id = conn.query(
+            UserAdmins.id_admin,
+        ).filter_by(id_user=id_user).all()
     if not value_id:
         return
     return value_id[0][0]
@@ -197,6 +205,32 @@ def select_user(user_id: int) -> object:
     with db_session() as conn:
         user_select = conn.query(User).filter_by(id=user_id).all()
     return user_select
+
+
+def return_coach_students(user_id: int) -> list:
+    value_return = []
+    with db_session() as conn:
+        if conn.query(User).filter_by(
+            id=user_id,
+            is_admin=True,
+        ).all():
+            value_return = [
+                i for i 
+                in conn.query(
+                    User.id,
+                    User.username,
+                    User.join_date_start,
+                    User.join_date_end,
+                ).select_from(
+                    User
+                ).join(
+                    UserAdmins,
+                    UserAdmins.id_user == User.id,
+                ).filter(
+                    UserAdmins.id_admin == user_id
+                ).all()
+            ]
+    return value_return
 
 
 def insert_user(chat: object):
