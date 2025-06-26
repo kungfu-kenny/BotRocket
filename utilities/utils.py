@@ -1,25 +1,23 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+
+
+def get_simple_date(element_date: str):
+    if element_date:
+        return datetime.strptime(element_date, "%Y.%m.%d")
+    return datetime.now() + timedelta(days=30)
 
 
 def produce_sorting_by_date_by_name(list_users: list) -> list:
-    list_users = sorted(
+    return sorted(
         list_users,
-        key=lambda x: (datetime.strptime(x[3], "%Y.%m.%d"), x[1]),
+        key=lambda x: (get_simple_date(x[3]), x[1]),
         reverse=True
     )
-    list_users = sorted(
-        list_users,
-        key=lambda x: x[1]
-    )
-    # list_users = sorted(
-    #     list_users,
-    #     key=lambda x: datetime.strptime(x[3], "%Y.%m.%d"),  # sort by date (descending)
-    #     reverse=True
-    # )
-    return list_users
 
 
 def provide_dates(date_old: str) -> str:
+    if not date_old:
+        return "⚪️"
     date_provided = datetime.strptime(date_old, "%Y.%m.%d")
     delta_days = abs(
         (datetime.now() - datetime.strptime(date_old, "%Y.%m.%d")).days
@@ -40,7 +38,7 @@ def produce_status(list_users: list) -> list:
             id_tg,
             name,
             provide_dates(date_legit),
-            date_legit,
+            date_legit if date_legit else "Вперше",
         ]
         for id_tg, name, _, date_legit in list_users
     ]

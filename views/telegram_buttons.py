@@ -415,7 +415,7 @@ def return_payment_coach(
     list_buttons.extend(
         [
             [
-                InlineKeyboardButton(text=username, url=f"tg://user?id={id_tg}"),
+                InlineKeyboardButton(text=username, callback_data="None"),#, url=f"tg://user?id={id_tg}"), #TODO think about it
                 InlineKeyboardButton(text=status, callback_data="None"),
                 InlineKeyboardButton(text=date_expand, callback_data="None"),
             ]
