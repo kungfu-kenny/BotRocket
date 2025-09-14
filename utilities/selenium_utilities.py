@@ -1,4 +1,5 @@
 import json
+import traceback
 from time import sleep
 from datetime import datetime
 from contextlib import contextmanager
@@ -24,9 +25,9 @@ def Driver(url: str = None):
         options.add_argument('--headless')
     driver = webdriver.Firefox(
         options=options,
-        # service=FirefoxService(GeckoDriverManager().install()),
+        service=FirefoxService(GeckoDriverManager().install()),
         # firefox_binary=FirefoxBinary(FIREFOX_BIN),
-        service=FirefoxService('misc/geckodriver/geckodriver'),
+        # service=FirefoxService('misc/geckodriver/geckodriver'),
         # executable_path='geckodriver/geckodriver',
     )
     driver.set_page_load_timeout(60)
@@ -35,6 +36,8 @@ def Driver(url: str = None):
         if url:
             driver.get(url)
         yield driver
+    # except Exception:
+    #     print(traceback.format_exc())
     finally:
         driver.close()
 
@@ -168,8 +171,10 @@ def get_new_events() -> list[dict[str, str]]:
         return list_events
     list_events, errors = get_smoothcomp()
     list_events_a, errors_a = get_ajp()
-    if not errors_a:
-        list_events.extend(list_events_a)
+    errors_a = False
+    #TODO add here ajp problem later
+    # if not errors_a:
+    #     list_events.extend(list_events_a)
     list_events.sort(key=lambda x: x["date"])
     for x in list_events:
         x["date"] = datetime.strftime(x['date'], '%Y.%m.%d')

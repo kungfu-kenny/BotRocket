@@ -74,6 +74,7 @@ CALLBACKS = {
     "admin_attach": "702",
     "student_next": "801",
     "student_show": "800",
+    "admin_student_filter": "900",
 }
 PAYMENT_CHARACTERISTICS = {
     "buy_water_big": {
@@ -110,6 +111,8 @@ DICT_MESSAGES = {
     "name_user": "Ім'я",
     "menu": "<b>Меню</b>",
     "payment_status": "Статус",
+    "paid_none": "Ніразу не платив",
+    "paid_non_attached": "Без тренера",
     "paid_fully": "Оплачено",
     "paid_partly": "Під питанням",
     "paid_failed": "Просрочені",

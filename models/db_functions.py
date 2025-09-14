@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from models.database import (
     User,
     UserAdmins,
+    AdminSettings,
     db_session,
 )
 from config import (
@@ -26,6 +27,55 @@ def _return_admins_list() -> list:
             in conn.query(User.id).filter_by(is_admin=True).all()
         ]
     return user_select
+
+
+def return_admin_preferences(id_admin: int) -> list[bool]:
+    """
+    Return admin preferences to the admin. Insert if empty
+    """
+    with db_session() as conn:
+        if not(
+            admin_preferences := conn.query(
+                AdminSettings,
+            ).filter_by(id=id_admin).all()
+        ):
+            conn.add(
+                AdminSettings(id=id_admin)
+            )
+            conn.commit()
+        return [
+            i for i 
+            in conn.query(
+                AdminSettings.show_new_users,
+                AdminSettings.show_responsible,
+                AdminSettings.show_day_minus,
+                AdminSettings.show_overdue,
+                AdminSettings.show_inactive,
+                AdminSettings.show_unattached,
+            ).filter_by(id=id_admin).all()
+        ][0]
+
+
+def update_admin_preferences(id_admin, number_filter, number_old) -> None:
+    number_old = False if int(number_old) else True
+    match number_filter:
+        case "0":
+            col = "show_new_users"
+        case "1":
+            col = "show_responsible"
+        case "2":
+            col = "show_day_minus"
+        case "3":
+            col = "show_overdue"
+        case "4":
+            col = "show_inactive"
+        case "5":
+            col = "show_unattached"
+    with db_session() as conn:
+        conn.query(AdminSettings).filter_by(
+                id = id_admin,
+            ).update({col: number_old})
+        conn.commit()
 
 
 def _get_list_admins() -> list[int]:
@@ -230,6 +280,7 @@ def return_coach_students(user_id: int) -> list:
                     UserAdmins.id_admin == user_id
                 ).all()
             ]
+            # TODO add here the possibility see unattached users
     return value_return
 
 

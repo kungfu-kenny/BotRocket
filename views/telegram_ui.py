@@ -15,6 +15,7 @@ import utilities.file_utilities as utilit
 from utilities.selenium_utilities import get_new_events
 from utilities.utils import (
     produce_status,
+    produce_username_empty,
     produce_sorting_by_date_by_name,
 )
 
@@ -70,7 +71,10 @@ async def produce_user_settings(message: Message):
             message.chat.id,
             cfg.DICT_MESSAGES["menu"],
             parse_mode='HTML',
-            reply_markup=but.return_menu_coach(message.chat.id),
+            reply_markup=but.return_menu_coach(
+                message.chat.id,
+                db.return_admin_preferences(message.chat.id),
+            ),
         )
     else: 
         id_coach_presence = db.check_user_has_admin(message.chat.id)
@@ -317,13 +321,76 @@ async def produce_show_students(call: CallbackQuery) -> None:
         )
     else:
         #TODO add here sorting after
+        #TODO here was the db added only need to insert/update_function
+        (
+            show_new_users,
+            show_responsible,
+            show_day_minus,
+            show_overdue,
+            show_inactive,
+            show_unattached,
+        ) = db.return_admin_preferences(id_admin)
+        list_abandon = [
+            key
+            for key, value in
+            {
+                "⚪️": show_new_users,
+                "🟢": show_responsible,
+                "🟡": show_day_minus,
+                "🔴": show_overdue,
+                "⚫️": show_inactive,
+            }.items()
+            if not value
+        ]
         list_students = produce_sorting_by_date_by_name(list_students)
-        list_students = produce_status(list_students)
+        list_students = produce_status(list_students, list_abandon)
+        list_students = produce_username_empty(list_students, 1)
         await bot.send_message(
             id_admin,
             cfg.DICT_MESSAGES["coach_settings"],
             parse_mode='HTML',
             reply_markup=but.return_payment_coach(list_students, id_admin),
+        )
+
+
+@dp.callback_query_handler(filter.CheckNextStudentAdminSee())
+async def produce_next_student_list_for_admin(call: CallbackQuery) -> None:
+    _, id_admin, index = call.data.split("_")
+    if not (list_students := db.return_coach_students(id_admin)):
+        await bot.send_message(
+            id_admin,
+            cfg.DICT_MESSAGES['admin_settings'],
+        )
+    else:
+        #TODO add here sorting after
+        #TODO here was the db added only need to insert/update_function
+        (
+            show_new_users,
+            show_responsible,
+            show_day_minus,
+            show_overdue,
+            show_inactive,
+            show_unattached,
+        ) = db.return_admin_preferences(id_admin)
+        list_abandon = [
+            key
+            for key, value in
+            {
+                "⚪️": show_new_users,
+                "🟢": show_responsible,
+                "🟡": show_day_minus,
+                "🔴": show_overdue,
+                "⚫️": show_inactive,
+            }.items()
+            if not value
+        ]
+        list_students = produce_sorting_by_date_by_name(list_students)
+        list_students = produce_status(list_students, list_abandon)
+        list_students = produce_username_empty(list_students, 1)
+        await bot.edit_message_reply_markup(
+            id_admin,
+            call.message.message_id,
+            reply_markup=but.return_payment_coach(list_students, id_admin, int(index)),
         )
 
 
@@ -371,6 +438,20 @@ async def produce_user_admin_connection(call: CallbackQuery) -> None:
         call.message.message_id,
         reply_markup=None,
     )
+
+
+@dp.callback_query_handler(filter.CheckAdminChangeFiltering())
+async def produce_admin_change_filtering(call: CallbackQuery) -> None:
+    _, id_admin, filter_number, filter_value = call.data.split('_')
+    db.update_admin_preferences(id_admin, filter_number, filter_value)
+    await bot.edit_message_reply_markup(
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=but.return_menu_coach(
+                call.message.chat.id,
+                db.return_admin_preferences(call.message.chat.id),
+            ),
+        )
 
 
 @dp.callback_query_handler(filter.CheckCancelChoice())

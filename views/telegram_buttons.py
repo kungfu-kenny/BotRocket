@@ -363,23 +363,51 @@ def return_menu_basic() -> object:
 
 
 # TODO continue work from here
-def return_menu_coach(admin_id: int) -> object:
+def return_menu_coach(admin_id: int, list_filter_students: list[bool]) -> object:
+    (
+        show_new_users,
+        show_responsible,
+        show_day_minus,
+        show_overdue,
+        show_inactive,
+        show_unattached,
+    ) = list_filter_students
+
     list_produce = [
         [
+            InlineKeyboardButton(DICT_MESSAGES["paid_none"], callback_data="None"),
+            InlineKeyboardButton(
+                "✅" if show_new_users else "⛔️",
+                callback_data=f'{CALLBACKS["admin_student_filter"]}_{admin_id}_0_{1 if show_new_users else 0}',
+            ),    
+        ],
+        [
             InlineKeyboardButton(DICT_MESSAGES["paid_fully"], callback_data="None"),
-            InlineKeyboardButton("✅", callback_data="None"),
+            InlineKeyboardButton(
+                "✅" if show_responsible else "⛔️",
+                callback_data=f'{CALLBACKS["admin_student_filter"]}_{admin_id}_1_{1 if show_responsible else 0}',
+            ),
         ],
         [
             InlineKeyboardButton(DICT_MESSAGES["paid_partly"], callback_data="None"),
-            InlineKeyboardButton("✅", callback_data="None"),
+            InlineKeyboardButton(
+                "✅" if show_day_minus else "⛔️",
+                callback_data=f'{CALLBACKS["admin_student_filter"]}_{admin_id}_2_{1 if show_day_minus else 0}',
+            ),
         ],
         [
             InlineKeyboardButton(DICT_MESSAGES["paid_failed"], callback_data="None"),
-            InlineKeyboardButton("✅", callback_data="None"),
+            InlineKeyboardButton(
+                "✅" if show_overdue else "⛔️",
+                callback_data=f'{CALLBACKS["admin_student_filter"]}_{admin_id}_3_{1 if show_overdue else 0}',
+            ),
         ],
         [
             InlineKeyboardButton(DICT_MESSAGES["paid_long_time"], callback_data="None"),
-            InlineKeyboardButton("✅", callback_data="None"),
+            InlineKeyboardButton(
+                "✅" if show_inactive else "⛔️",
+                callback_data=f'{CALLBACKS["admin_student_filter"]}_{admin_id}_4_{1 if show_inactive else 0}',
+            ),
         ],
         [
             InlineKeyboardButton(
@@ -419,7 +447,7 @@ def return_payment_coach(
                 InlineKeyboardButton(text=status, callback_data="None"),
                 InlineKeyboardButton(text=date_expand, callback_data="None"),
             ]
-            for id_tg, username, status, date_expand in list_students[len_students - 1]
+            for id_tg, username, status, date_expand in list_students[index_use]
         ]
     )
     if len_students > 1:

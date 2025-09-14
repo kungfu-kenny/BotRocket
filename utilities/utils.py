@@ -15,6 +15,14 @@ def produce_sorting_by_date_by_name(list_users: list) -> list:
     )
 
 
+def produce_username_empty(list_users: list, index_username: int = 1) -> list:
+    #TODO add here the new 
+    for list_user in list_users:
+        if not list_user[index_username]:
+            list_user[index_username] = "Не вказано"
+    return list_users
+
+
 def provide_dates(date_old: str) -> str:
     if not date_old:
         return "⚪️"
@@ -32,14 +40,15 @@ def provide_dates(date_old: str) -> str:
         return "⚫️"
 
 
-def produce_status(list_users: list) -> list:
+def produce_status(list_users: list, list_abandon: list=[]) -> list:
     return [
         [
             id_tg,
             name,
-            provide_dates(date_legit),
+            provide_status,
             date_legit if date_legit else "Вперше",
         ]
         for id_tg, name, _, date_legit in list_users
+        if (provide_status := provide_dates(date_legit))
+        and not provide_status in list_abandon        
     ]
-

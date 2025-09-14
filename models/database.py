@@ -73,10 +73,18 @@ class User(Base):
 
 
 # TODO continue work from here
-# class AdminSettings(Base):
-#     __tablename__ = 'admin_settings'
-#     id: Mapped[int]
-
+class AdminSettings(Base):
+    __tablename__ = 'admin_settings'
+    id: Mapped[int] = mapped_column(Integer(), ForeignKey('user_accounts.id'), primary_key=True)
+    show_responsible: Mapped[bool] = mapped_column(Boolean(), default=True)
+    show_day_minus:Mapped[bool] = mapped_column(Boolean(), default=True)
+    show_overdue:Mapped[bool] = mapped_column(Boolean(), default=True)
+    show_inactive:Mapped[bool] = mapped_column(Boolean(), default=True)
+    show_new_users:Mapped[bool] = mapped_column(Boolean(), default=True)
+    show_unattached: Mapped[bool] = mapped_column(Boolean(), default=True)
+    id_admin: Mapped[List["User"]] = relationship(
+        foreign_keys=[id],
+    )
 
 #TODO work after here
 # class UserPass(Base):

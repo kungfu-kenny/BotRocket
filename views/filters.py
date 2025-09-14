@@ -26,6 +26,22 @@ class CheckConfirmScheduleDelete(Filter):
         return call.data == CALLBACKS["schedule_delete"]
 
 
+class CheckAdminChangeFiltering(Filter):
+    key = "is_admin_change_filter"
+
+    async def check(self, call: CallbackQuery) -> bool:
+        call_use = call.data.split("_")
+        return len(call_use) == 4 and call_use[0] == CALLBACKS["admin_student_filter"]
+
+
+class CheckNextStudentAdminSee(Filter):
+    key = "is_admin_wants_see_next_student"
+
+    async def check(self, call: CallbackQuery) -> bool:
+        call_use = call.data.split("_")
+        return len(call_use) == 3 and call_use[0] == CALLBACKS["student_next"]
+
+
 class CheckCancelChoice(Filter):
     key = "is_cancel_choice"
 
